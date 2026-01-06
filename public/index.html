@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>OBS Control</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 24px; max-width: 900px; }
+      h1 { margin: 0 0 12px 0; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+      button { padding: 14px 12px; font-size: 16px; cursor: pointer; border-radius: 10px; border: 1px solid #ccc; background: #fff; }
+      button:active { transform: scale(0.99); }
+      .row { display: flex; gap: 10px; align-items: center; margin: 12px 0 18px 0; }
+      input { padding: 10px; border-radius: 10px; border: 1px solid #ccc; width: 260px; }
+      .status { font-size: 14px; opacity: 0.85; }
+      .ok { color: #0a7; }
+      .bad { color: #c33; }
+      .small { font-size: 12px; opacity: 0.7; }
+      pre { background: #f7f7f7; padding: 12px; border-radius: 10px; overflow: auto; }
+    </style>
+  </head>
+  <body>
+    <h1 id="title">OBS Control</h1>
+
+    <div class="row">
+      <input id="token" placeholder="Token" />
+      <button id="saveToken">Save</button>
+      <div id="health" class="status">Checking server…</div>
+    </div>
+
+    <div class="grid" id="buttons"></div>
+
+    <p class="small">Tip: Token is stored in localStorage on this browser.</p>
+    <pre id="log"></pre>
+
+    <script>
+      const logEl = document.getElementById("log")
+      const healthEl = document.getElementById("health")
+      const buttonsEl = document.getElementById("buttons")
+      const tokenEl = document.getElementById("token")
+
+      const saved = localStorage.getItem("panelToken") || ""
+      tokenEl.value = saved
+
+      document.getElementById("saveToken").onclick = () => {
+        localStorage.setItem("panelToken", tokenEl.value.trim())
+        log("Token saved")
+      }
+
+      function log(msg) {
+        const t = new Date().toISOString()
+        logEl.textContent = `${t} ${msg}\n` + logEl.textContent
+      }
+
+      function tokenHeader() {
+        const t = (tokenEl.value || "").trim()
+        return t ? { "x-panel-token": t } : {}
+      }
+
+      async function checkHealth() {
+        try {
+          const r = await fetch("/api/health", { headers: tokenHeader() })
+          const j = await r.json()
+          if (r.ok && j && j.ok) {
+            healthEl.textContent = "Server ok, OBS connected"
+            healthEl.className = "status ok"
+          } else {
+            healthEl.textContent = "Server ok, OBS not connected"
+            healthEl.className = "status bad"
+          }
+        } catch (e) {
+          healthEl.textContent = "Server not reachable"
+          healthEl.className = "status bad"
+        }
+      }
+
+      async function loadPanel() {
+        const r = await fetch("/api/panel", { headers: tokenHeader() })
+        if (!r.ok) {
+          const txt = await r.text()
+          throw new Error(txt || "Failed to load panel")
+        }
+        const panel = await r.json()
+        document.getElementById("title").textContent = panel.title || "OBS Control"
+        buttonsEl.innerHTML = ""
+
+        for (const b of panel.buttons || []) {
+          const btn = document.createElement("button")
+          btn.textContent = b.label || "Button"
+          btn.onclick = async () => {
+            try {
+              const rr = await fetch("/api/action", {
+                method: "POST",
+                headers: { "content-type": "application/json", ...tokenHeader() },
+                body: JSON.stringify(b)
+              })
+              const jj = await rr.json().catch(() => ({}))
+              if (!rr.ok) {
+                log(`Error: ${jj.error || rr.statusText}`)
+                return
+              }
+              log(`Ok: ${jj.message || "done"}`)
+              await checkHealth()
+            } catch (e) {
+              log(`Error: ${e.message}`)
+            }
+          }
+          buttonsEl.appendChild(btn)
+        }
+      }
+
+      ;(async () => {
+        await checkHealth()
+        try {
+          await loadPanel()
+          log("Panel loaded")
+        } catch (e) {
+          log(`Panel error: ${e.message}`)
+        }
+        setInterval(checkHealth, 5000)
+      })()
+    </script>
+  </body>
+</html>

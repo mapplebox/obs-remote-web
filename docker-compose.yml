@@ -1,0 +1,13 @@
+services:
+  obs-control:
+    build: .
+    container_name: obs-control
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      OBS_WS_URL: ""
+      OBS_WS_PASSWORD: ""
+      PANEL_TOKEN: ""
+      PANEL_JSON_PATH: "/app/panel.json"

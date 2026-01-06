@@ -1,0 +1,9 @@
+{
+  "name": "obs-control",
+  "type": "module",
+  "private": true,
+  "dependencies": {
+    "express": "^4.19.2",
+    "obs-websocket-js": "^5.0.6"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "title": "OBS Control",
+  "buttons": [
+    { "label": "Scene STARTING", "action": "scene", "sceneName": "STARTING" },
+    { "label": "Scene LIVE", "action": "scene", "sceneName": "LIVE" },
+    { "label": "Scene END", "action": "scene", "sceneName": "END" },
+    { "label": "Start Stream", "action": "start_stream" },
+    { "label": "Stop Stream", "action": "stop_stream" },
+    { "label": "Start Recording", "action": "start_recording" },
+    { "label": "Stop Recording", "action": "stop_recording" }
+  ]
+}
